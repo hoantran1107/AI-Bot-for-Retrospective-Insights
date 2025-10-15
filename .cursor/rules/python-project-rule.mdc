@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+# Rule for Python Projects
+
+- Use uv instead of pip for Python package management.
+- All test must pass 100% do not skip any tests.
+- Alway run unit test to clarify the code is working as expected.
+- Fix unit test if it is broken until it passes 100%.
+- Do not miss any test cases.
