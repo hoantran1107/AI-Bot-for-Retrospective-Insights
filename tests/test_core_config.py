@@ -25,7 +25,7 @@ def test_settings_defaults():
 def test_settings_llm_provider():
     """Test LLM provider configuration."""
     test_settings = Settings()
-    assert test_settings.llm_provider in ["openai", "anthropic"]
+    assert test_settings.llm_provider in ["openai", "anthropic", "azure"]
     assert test_settings.llm_model is not None
 
 

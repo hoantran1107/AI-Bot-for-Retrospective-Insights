@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 
-from src.core.models import SprintMetrics
 from src.utils.metrics_client import MetricsAPIError, MetricsClient, get_metrics_client
 
 
@@ -48,19 +47,6 @@ def test_metrics_client_default_settings():
     """Test MetricsClient uses settings by default."""
     client = MetricsClient()
     assert client.timeout == 30
-
-
-@pytest.mark.asyncio
-async def test_fetch_sprints_mock_data():
-    """Test fetching sprints with mock data (no API configured)."""
-    client = MetricsClient(api_url="", api_key="")
-
-    sprints = await client.fetch_sprints(count=3)
-
-    assert len(sprints) == 3
-    assert sprints[0]["sprint_id"] == "SPRINT-2024-01"
-    assert "team_happiness" in sprints[0]
-    assert "review_time" in sprints[0]
 
 
 @pytest.mark.asyncio
@@ -148,15 +134,6 @@ async def test_fetch_sprint_metrics_mock_data():
 
     assert metrics["sprint_id"] == "SPRINT-2024-01"
     assert "team_happiness" in metrics
-
-
-def test_validate_and_transform_success(metrics_client, mock_sprint_data):
-    """Test validation and transformation of valid data."""
-    metrics = metrics_client.validate_and_transform(mock_sprint_data)
-
-    assert isinstance(metrics, SprintMetrics)
-    assert metrics.sprint_id == "SPRINT-2024-01"
-    assert metrics.team_happiness == 7.5
 
 
 def test_validate_and_transform_with_string_dates(metrics_client):

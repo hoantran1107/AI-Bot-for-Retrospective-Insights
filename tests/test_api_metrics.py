@@ -12,14 +12,14 @@ from src.core.models import SprintMetrics
 client = TestClient(app)
 
 
-def create_sample_sprint_data(sprint_number: int) -> dict:
+def create_sample_sprint_data(sprint_number: int, test_id: str = "default") -> dict:
     """Create sample sprint data for testing."""
     start_date = datetime.utcnow() - timedelta(days=14 * sprint_number)
     end_date = start_date + timedelta(days=14)
 
     return {
-        "sprint_id": f"SPRINT-{sprint_number}",
-        "sprint_name": f"Sprint {sprint_number}",
+        "sprint_id": f"SPRINT-{test_id}-{sprint_number}",
+        "sprint_name": f"Sprint {test_id} {sprint_number}",
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "team_happiness": 7.0 + (sprint_number % 3),
@@ -33,11 +33,13 @@ def create_sample_sprint_data(sprint_number: int) -> dict:
 
 def test_fetch_and_store_metrics(test_db):
     """Test fetching and storing metrics from external API."""
+    test_id = "fetch_store"
+
     # Mock metrics client
     from unittest.mock import Mock
 
     mock_client = Mock()
-    mock_sprints = [create_sample_sprint_data(i) for i in range(1, 4)]
+    mock_sprints = [create_sample_sprint_data(i, test_id) for i in range(1, 4)]
 
     # Create proper async mock
     async def mock_fetch(*args, **kwargs):
@@ -55,7 +57,7 @@ def test_fetch_and_store_metrics(test_db):
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
-        assert data[0]["sprint_id"] == "SPRINT-1"
+        assert data[0]["sprint_id"] == f"SPRINT-{test_id}-1"
         assert "metrics_data" in data[0]
 
         # Verify data was stored in database
@@ -95,8 +97,10 @@ def test_fetch_metrics_updates_existing(test_db):
     """Test that fetching metrics updates existing snapshots."""
     from unittest.mock import Mock
 
+    test_id = "update_existing"
+
     # First, create an existing snapshot
-    sprint_data = create_sample_sprint_data(1)
+    sprint_data = create_sample_sprint_data(1, test_id)
     sprint_metrics = SprintMetrics(**sprint_data)
 
     existing = MetricsSnapshot(
@@ -133,7 +137,7 @@ def test_fetch_metrics_updates_existing(test_db):
         test_db.expire_all()  # Refresh the session
         snapshot = (
             test_db.query(MetricsSnapshot)
-            .filter(MetricsSnapshot.sprint_id == "SPRINT-1")
+            .filter(MetricsSnapshot.sprint_id == f"SPRINT-{test_id}-1")
             .first()
         )
         assert snapshot.metrics_data["team_happiness"] == 9.0
@@ -144,9 +148,11 @@ def test_fetch_metrics_updates_existing(test_db):
 
 def test_list_metrics(test_db):
     """Test listing metrics snapshots."""
+    test_id = "list_metrics"
+
     # Create some test snapshots
     for i in range(1, 6):
-        sprint_data = create_sample_sprint_data(i)
+        sprint_data = create_sample_sprint_data(i, test_id)
         sprint_metrics = SprintMetrics(**sprint_data)
         snapshot = MetricsSnapshot(
             sprint_id=sprint_metrics.sprint_id,
@@ -158,7 +164,8 @@ def test_list_metrics(test_db):
         test_db.add(snapshot)
     test_db.commit()
 
-    # Test listing
+    # Test listing - this uses the database from dependency injection
+    # which should be the same as test_db since we set it up in conftest.py
     response = client.get("/metrics")
     assert response.status_code == 200
     data = response.json()
@@ -179,8 +186,10 @@ def test_list_metrics(test_db):
 
 def test_get_metrics_by_sprint_id(test_db):
     """Test retrieving specific metrics by sprint ID."""
+    test_id = "get_metrics"
+
     # Create test snapshot
-    sprint_data = create_sample_sprint_data(1)
+    sprint_data = create_sample_sprint_data(1, test_id)
     sprint_metrics = SprintMetrics(**sprint_data)
     snapshot = MetricsSnapshot(
         sprint_id=sprint_metrics.sprint_id,
@@ -193,11 +202,11 @@ def test_get_metrics_by_sprint_id(test_db):
     test_db.commit()
 
     # Test retrieval
-    response = client.get("/metrics/SPRINT-1")
+    response = client.get(f"/metrics/SPRINT-{test_id}-1")
     assert response.status_code == 200
     data = response.json()
-    assert data["sprint_id"] == "SPRINT-1"
-    assert data["sprint_name"] == "Sprint 1"
+    assert data["sprint_id"] == f"SPRINT-{test_id}-1"
+    assert data["sprint_name"] == f"Sprint {test_id} 1"
     assert "metrics_data" in data
 
 
@@ -210,8 +219,10 @@ def test_get_metrics_not_found():
 
 def test_delete_metrics(test_db):
     """Test deleting metrics snapshot."""
+    test_id = "delete_metrics"
+
     # Create test snapshot
-    sprint_data = create_sample_sprint_data(1)
+    sprint_data = create_sample_sprint_data(1, test_id)
     sprint_metrics = SprintMetrics(**sprint_data)
     snapshot = MetricsSnapshot(
         sprint_id=sprint_metrics.sprint_id,
@@ -224,7 +235,7 @@ def test_delete_metrics(test_db):
     test_db.commit()
 
     # Test deletion
-    response = client.delete("/metrics/SPRINT-1")
+    response = client.delete(f"/metrics/SPRINT-{test_id}-1")
     assert response.status_code == 200
     assert response.json()["status"] == "deleted"
 
@@ -232,7 +243,7 @@ def test_delete_metrics(test_db):
     test_db.expire_all()  # Refresh the session
     snapshot = (
         test_db.query(MetricsSnapshot)
-        .filter(MetricsSnapshot.sprint_id == "SPRINT-1")
+        .filter(MetricsSnapshot.sprint_id == f"SPRINT-{test_id}-1")
         .first()
     )
     assert snapshot is None

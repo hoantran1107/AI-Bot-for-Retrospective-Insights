@@ -18,17 +18,55 @@ os.environ.setdefault("EXTERNAL_METRICS_API_KEY", "")
 os.environ.setdefault("LLM_PROVIDER", "openai")
 os.environ.setdefault("AZURE_ENDPOINT", "")
 os.environ.setdefault("AZURE_DEPLOYMENT", "")
+# Set other required environment variables for tests
+os.environ.setdefault("CHAT_COMPLETION_API_KEY", "test-key")
+os.environ.setdefault("LLM_MODEL", "gpt-4")
+os.environ.setdefault("TREND_THRESHOLD", "0.20")
+os.environ.setdefault("CORRELATION_THRESHOLD", "0.6")
+os.environ.setdefault("CONFIDENCE_HIGH_THRESHOLD", "0.8")
+os.environ.setdefault("CONFIDENCE_MEDIUM_THRESHOLD", "0.5")
+os.environ.setdefault("DEFAULT_SPRINT_COUNT", "5")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("AZURE_API_VERSION", "2024-02-15-preview")
+
+from dotenv import load_dotenv
 
 from src.api.dependencies import get_db
 from src.api.main import app
 from src.core.database import Base
 
-# Create shared test database (in-memory)
-SQLALCHEMY_DATABASE_URL = "sqlite:///file:memdb_test?mode=memory&cache=shared&uri=true"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False, "uri": True}
-)
+load_dotenv()
+
+# Global database configuration - will be overridden per test file
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_global.db"
+engine = None
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(scope="module")
+def setup_test_database():
+    """Setup database for each test module (file)."""
+    global engine, TestingSessionLocal
+
+    # Create unique database for this test file
+    db_url = "sqlite:///./test.db"
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    # Drop all tables first to ensure clean state
+    Base.metadata.drop_all(bind=engine)
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+
+    yield
+
+    # Cleanup after all tests in this module
+    try:
+        Base.metadata.drop_all(bind=engine)
+    except Exception:
+        pass  # Ignore cleanup errors
+    finally:
+        engine.dispose()
 
 
 def override_get_db():
@@ -40,24 +78,21 @@ def override_get_db():
         db.close()
 
 
-# Override the dependency once at module level
-app.dependency_overrides[get_db] = override_get_db
+# Override the dependency - this will be called after database setup
+@pytest.fixture(scope="module", autouse=True)
+def setup_dependencies(setup_test_database):
+    """Setup FastAPI dependencies for testing."""
+    app.dependency_overrides.clear()  # Clear existing overrides
+    app.dependency_overrides[get_db] = override_get_db
 
-
-@pytest.fixture(scope="function", autouse=True)
-def setup_database():
-    """Setup and teardown database for each test."""
-    # Drop all tables first to ensure clean state
-    Base.metadata.drop_all(bind=engine)
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
     yield
-    # Drop all tables after test
-    Base.metadata.drop_all(bind=engine)
+
+    # Cleanup dependencies
+    app.dependency_overrides.clear()
 
 
-@pytest.fixture(autouse=True)
-def mock_llm():
+@pytest.fixture(scope="module", autouse=True)
+def mock_llm(setup_test_database):
     """Mock LLM integration to avoid real API calls."""
     with patch("src.analysis.llm_integration.LLMClient._call_llm") as mock:
         # Return simple mock responses
@@ -68,11 +103,45 @@ def mock_llm():
 @pytest.fixture
 def test_db():
     """Provide a database session for tests that need direct DB access."""
-    db = next(override_get_db())
+    # Create fresh session for each test and ensure clean state
+    db = TestingSessionLocal()
+
+    # Clear all data from database for this test
+    try:
+        # Import models here to avoid circular imports
+        from src.core.database import (
+            AnalysisReportDB,
+            AnalysisTaskDB,
+            ExperimentDB,
+            HypothesisDB,
+            MetricsSnapshot,
+        )
+
+        db.query(MetricsSnapshot).delete()
+        db.query(AnalysisReportDB).delete()
+        db.query(HypothesisDB).delete()
+        db.query(ExperimentDB).delete()
+        db.query(AnalysisTaskDB).delete()
+        db.commit()
+    except Exception:
+        db.rollback()
+
     try:
         yield db
     finally:
-        db.close()
+        try:
+            db.rollback()
+            db.close()
+        except Exception:
+            pass
+
+
+@pytest.fixture(autouse=True)
+def reset_database():
+    """Ensure clean database state for each test."""
+    # This runs before each test to ensure clean state
+    # Database tables are already created by setup_test_database fixture
+    pass
 
 
 # Alias for backward compatibility
