@@ -5,40 +5,44 @@ description = "AI-powered system for analyzing team metrics and generating retro
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [
-    { name = "Your Name", email = "your.email@example.com" }
-]
+authors = [{ name = "Your Name", email = "your.email@example.com" }]
 
 dependencies = [
     # FastAPI and server
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "python-multipart>=0.0.6",
-    
+
     # Database
     "sqlalchemy>=2.0.35",
     "alembic>=1.13.1",
-    
+
     # Celery and async
     "celery==5.3.6",
     "redis==5.0.1",
-    
+
     # Data processing and analysis
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "scipy>=1.12.0",
-    
+
     # Charts
     "plotly==5.18.0",
-    
+
     # LLM Integration
     "openai==1.10.0",
     "anthropic==0.18.0",
-    
+
+    # LangGraph and LangChain for AI Agent
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-core>=0.3.0",
+
     # HTTP client
     "httpx==0.26.0",
     "requests==2.31.0",
-    
+
     # Configuration
     "python-dotenv>=1.0.0",
     "pydantic>=2.5.0",
@@ -52,7 +56,7 @@ dev = [
     "pytest-asyncio==0.23.3",
     "pytest-cov==4.1.0",
     "pytest-mock==3.12.0",
-    
+
     # Code quality
     "black==24.1.1",
     "flake8==7.0.0",
@@ -94,12 +98,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--showlocals",
-    "--tb=short",
-]
+addopts = ["--strict-markers", "--strict-config", "--showlocals", "--tb=short"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -107,4 +106,3 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
-

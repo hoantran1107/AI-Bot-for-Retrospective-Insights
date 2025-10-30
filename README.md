@@ -13,6 +13,14 @@ This system acts as an AI Agile Coach, automatically analyzing sprint metrics to
 
 ## ✨ Key Features
 
+### 🆕 Dashboard Integration & AI Agent (NEW!)
+
+- **Real-time Dashboard Data**: Integrated with N8N webhooks for live metrics
+- **LangGraph AI Agent**: Intelligent analysis using state-based reasoning
+- **Natural Language Queries**: Ask questions in plain English
+- **Auto Chart Selection**: AI determines relevant data automatically
+- **Smart Insights**: GPT-4-powered recommendations
+
 ### Automated Analysis
 
 - **Statistical Analysis**: Trend detection, correlation analysis, anomaly detection

@@ -1,4 +1,4 @@
-import { ArrowLeft, Flask, Lightbulb, Minus, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Beaker, Lightbulb, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -215,7 +215,7 @@ export default function ReportDetailPage() {
           {report.suggested_experiments.map((experiment: ExperimentSuggestion, index) => (
             <div key={index} className="p-6 border-2 border-purple-200 rounded-lg bg-purple-50">
               <div className="flex items-start gap-3 mb-3">
-                <Flask className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
+                <Beaker className="h-6 w-6 text-purple-600 flex-shrink-0 mt-1" />
                 <div className="flex-1">
                   <h3 className="text-xl font-semibold text-gray-900">{experiment.title}</h3>
                   <p className="mt-2 text-gray-700">{experiment.description}</p>
